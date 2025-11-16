@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server'
 
 // Update these values with your actual domain and Base Account address after deployment
-const ROOT_URL = process.env.NEXT_PUBLIC_URL || 'https://your-app.vercel.app'
+const ROOT_URL = process.env.NEXT_PUBLIC_URL || 'https://flappy-b.vercel.app'
 const OWNER_ADDRESS = process.env.BASE_ACCOUNT_ADDRESS || '0x' // Add your Base Account address
 
 // Account association fields - these will be generated using Base Build tool
 // See: https://www.base.dev/preview?tab=account
 const accountAssociation = {
-  header: '',
-  payload: '',
-  signature: '',
+  header: 'eyJmaWQiOjE0MTIwMzMsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHgxNkY4Qzk1NGY2RDQ2OTRiN0M1NUFGOWEwYzFhOGQ2NkViMDkxMDdBIn0',
+  payload: 'eyJkb21haW4iOiJmbGFwcHktYi52ZXJjZWwuYXBwIn0',
+  signature: 'impZZB88GRbS4iADVP0mBGQKW6fY1TxaVtNfPhLUyFNxbJRgbC07jiaV9L8aIUX9Kn/19qtMbk3Ik0uj0Y/0VBw=',
 }
 
 export async function GET() {
