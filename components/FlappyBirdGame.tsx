@@ -125,6 +125,23 @@ export default function FlappyBirdGame() {
       }
     })()
   }, [])
+
+  const loginWithFarcaster = async () => {
+    try {
+      setAuthLoading(true)
+      const maybeAuth = (sdk as any)?.actions?.authenticate
+      if (typeof maybeAuth === 'function') {
+        await maybeAuth()
+      }
+      const ctx = (await (sdk as any)?.context?.get?.()) ?? (sdk as any)?.context
+      const fid = ctx?.user?.fid
+      if (typeof fid === 'number') setUserFid(fid)
+    } catch (e) {
+      // ignore
+    } finally {
+      setAuthLoading(false)
+    }
+  }
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const scoreOverlayRef = useRef<HTMLDivElement>(null)
@@ -143,6 +160,7 @@ export default function FlappyBirdGame() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false)
   const [leaderboard, setLeaderboard] = useState<Array<{ fid: number; score: number }>>([])
+  const [authLoading, setAuthLoading] = useState(false)
 
   // Game state refs (to avoid re-renders)
   const gameStateRef = useRef(gameState)
@@ -1013,6 +1031,20 @@ export default function FlappyBirdGame() {
       <div ref={containerRef} className={styles.gameContainer}>
         <canvas ref={canvasRef} className={styles.canvas} width={400} height={600} />
         <div ref={scoreOverlayRef} className={styles.scoreOverlay}></div>
+        <div style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: 6, fontSize: 14 }}>
+          {userFid ? (
+            <span>Connected: fid {userFid}</span>
+          ) : (
+            <button
+              onClick={loginWithFarcaster}
+              disabled={authLoading}
+              className={styles.settingsButton}
+              style={{ margin: 0, padding: '6px 10px' }}
+            >
+              {authLoading ? 'Connecting…' : 'Login (Farcaster)'}
+            </button>
+          )}
+        </div>
         <div ref={centerTextRef} className={styles.centerText}></div>
 
         <div

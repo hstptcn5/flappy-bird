@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 // Update these values with your actual domain and Base Account address after deployment
 const ROOT_URL = process.env.NEXT_PUBLIC_URL || 'https://flappy-b.vercel.app'
-const OWNER_ADDRESS = process.env.BASE_ACCOUNT_ADDRESS || '0x' // Add your Base Account address
+const OWNER_ADDRESS = process.env.BASE_ACCOUNT_ADDRESS || '0x71d5f27c5009fB33ed3e7BAF57b793C0A8879927' // Add your Base Account address
 
 // Account association fields - these will be generated using Base Build tool
 // See: https://www.base.dev/preview?tab=account
@@ -22,7 +22,7 @@ export async function GET() {
       version: '1',
       name: 'Flappy Mini',
       homeUrl: ROOT_URL,
-      iconUrl: `${ROOT_URL}/icon.png`,
+      iconUrl: `${ROOT_URL}/1.png`,
       splashImageUrl: `${ROOT_URL}/splash-image.png`,
       splashBackgroundColor: '#222222',
       webhookUrl: `${ROOT_URL}/api/webhook`,
