@@ -1,0 +1,215 @@
+.gameContainer {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  aspect-ratio: 4 / 6;
+}
+
+.canvas {
+  background: linear-gradient(#4eb5ff, #c0f5ff);
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: background 0.5s;
+}
+
+.scoreOverlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.4);
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .scoreOverlay {
+    font-size: 14px;
+    top: 8px;
+    left: 8px;
+  }
+}
+
+.centerText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+  padding: 16px;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.4;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 1), 0 0 2px #000;
+}
+
+.settingsButton {
+  pointer-events: all;
+  margin-top: 20px;
+  padding: 8px 16px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 4px #2980b9;
+  transition: all 0.1s;
+}
+
+.settingsButton:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px #2980b9;
+}
+
+.settingsModal {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 10;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+}
+
+.leaderboardModal {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 11;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.leaderboardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.leaderboardTitle {
+  font-size: 1.6em;
+  color: gold;
+  text-shadow: 0 0 6px #000;
+}
+
+.leaderboardList {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.leaderboardItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.08);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.rank {
+  width: 28px;
+  text-align: center;
+  font-weight: 700;
+  color: #4eb5ff;
+}
+
+.fid {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  opacity: 0.9;
+}
+
+.lbClose {
+  align-self: center;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #e74c3c;
+  color: #fff;
+  box-shadow: 0 4px #c0392b;
+  cursor: pointer;
+}
+
+.shopSection {
+  margin-bottom: 25px;
+  width: 100%;
+  max-width: 350px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 15px;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.shopSection h3 {
+  font-size: 1.5em;
+  margin-bottom: 15px;
+  text-align: center;
+  text-shadow: 0 0 3px #000;
+}
+
+.selectionGrid {
+  display: flex;
+  justify-content: space-around;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.itemCard {
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  width: 80px;
+  transition: transform 0.1s, box-shadow 0.1s;
+  border: 2px solid transparent;
+  opacity: 0.7;
+}
+
+.itemCard.selected {
+  border-color: #3498db;
+  box-shadow: 0 0 10px #3498db;
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.itemPreview {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 5px;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+.themePreview {
+  height: 40px;
+  margin: 0 auto 5px;
+  border-radius: 5px;
+  background-color: #2ecc71;
+}
+
+

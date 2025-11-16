@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flappy Mini (Nâng Cao)</title>
+  <!-- Thư viện Tone.js cho hiệu ứng âm thanh (SFX) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+  <style>
+    /* 1. CSS CƠ BẢN & PHONG CÁCH */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #222;
+      color: #fff;
+      /* Dùng font hiện đại, dễ đọc, phù hợp với Tailwind/Inter */
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden; /* Tránh thanh cuộn trên mobile */
+    }
+
+    #game-container {
+      position: relative;
+      /* Đảm bảo responsive trên mobile */
+      width: 100%;
+      max-width: 400px; 
+      aspect-ratio: 4 / 6; /* Giữ tỷ lệ canvas */
+    }
+
+    canvas {
+      /* Mặc định, sẽ được JS ghi đè bằng gradient động */
+      background: linear-gradient(#4eb5ff, #c0f5ff); 
+      display: block;
+      width: 100%; /* Chiếm hết container */
+      height: 100%;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6); /* Đổ bóng sâu hơn */
+      cursor: pointer;
+      transition: background 0.5s; /* Chuyển đổi màu nền mượt mà */
+    }
+    
+    /* 2. OVERLAY VÀ CHỮ GIỮA MÀN HÌNH */
+
+    #score-overlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background-color: rgba(0, 0, 0, 0.4);
+      text-shadow: 0 0 4px rgba(0,0,0,0.8);
+      white-space: nowrap;
+      /* Responsive font size cho mobile */
+      @media (max-width: 600px) {
+        font-size: 14px;
+        top: 8px;
+        left: 8px;
+      }
+    }
+
+    #center-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none; /* Không chặn click */
+      text-align: center;
+      padding: 16px;
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.4;
+      color: #fff;
+      text-shadow: 0 0 8px rgba(0,0,0,1), 0 0 2px #000;
+    }
+
+    /* 3. NÚT CHỌN THEME/SKIN */
+    .settings-button {
+        pointer-events: all; /* Cho phép click */
+        margin-top: 20px;
+        padding: 8px 16px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        box-shadow: 0 4px #2980b9;
+        transition: all 0.1s;
+    }
+    
+    .settings-button:active {
+        transform: translateY(2px);
+        box-shadow: 0 2px #2980b9;
+    }
+    
+    /* 4. MODAL SETTINGS */
+    #settings-modal {
+        position: absolute;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.9);
+        z-index: 10;
+        border-radius: 12px;
+        padding: 20px;
+        display: none; /* Bắt đầu ẩn */
+        flex-direction: column;
+        align-items: center;
+        overflow-y: auto;
+    }
+
+    .shop-section {
+        margin-bottom: 25px;
+        width: 100%;
+        max-width: 350px;
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 10px;
+        padding: 15px;
+        background-color: rgba(255,255,255,0.1);
+    }
+    
+    .shop-section h3 {
+        font-size: 1.5em;
+        margin-bottom: 15px;
+        text-align: center;
+        text-shadow: 0 0 3px #000;
+    }
+
+    .selection-grid {
+        display: flex;
+        justify-content: space-around;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .item-card {
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        width: 80px;
+        transition: transform 0.1s, box-shadow 0.1s;
+        border: 2px solid transparent;
+        opacity: 0.7;
+    }
+
+    .item-card.selected {
+        border-color: #3498db;
+        box-shadow: 0 0 10px #3498db;
+        opacity: 1;
+        transform: scale(1.05);
+    }
+    
+    .item-preview {
+        width: 40px;
+        height: 40px;
+        margin: 0 auto 5px;
+        border-radius: 50%;
+        border: 2px solid white;
+    }
+    
+    .theme-preview {
+        height: 40px;
+        margin: 0 auto 5px;
+        border-radius: 5px;
+        background-color: #2ecc71; /* Fallback */
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <!-- Canvas sẽ được JS điều chỉnh kích thước để fit container -->
+    <canvas id="game" width="400" height="600"></canvas>
+    <div id="score-overlay"></div>
+    <div id="center-text"></div>
+    
+    <!-- MODAL SETTINGS/SHOP -->
+    <div id="settings-modal" style="display: none;">
+        <h2 style="margin-bottom: 20px; font-size: 2em; color: gold;">CỬA HÀNG & CÀI ĐẶT</h2>
+
+        <!-- 1. CHỌN TRANG PHỤC (SKIN) -->
+        <div class="shop-section">
+            <h3>Chọn Trang Phục Chim</h3>
+            <div id="skin-grid" class="selection-grid">
+                <!-- Nội dung được chèn bằng JS -->
+            </div>
+        </div>
+
+        <!-- 2. CHỌN CHỦ ĐỀ (THEME) -->
+        <div class="shop-section">
+            <h3>Chọn Chủ Đề Màn Chơi</h3>
+            <div id="theme-grid" class="selection-grid">
+                <!-- Nội dung được chèn bằng JS -->
+            </div>
+        </div>
+
+        <button class="settings-button" onclick="closeSettingsModal()" style="margin-top: 30px; background-color: #e74c3c; box-shadow: 0 4px #c0392b;">ĐÓNG</button>
+    </div>
+  </div>
+
+  <script>
+    // Định nghĩa các hằng số và lấy DOM elements
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const scoreOverlay = document.getElementById("score-overlay");
+    const centerText = document.getElementById("center-text");
+    const settingsModal = document.getElementById("settings-modal");
+    const skinGrid = document.getElementById("skin-grid");
+    const themeGrid = document.getElementById("theme-grid");
+
+
+    let width = canvas.width;
+    let height = canvas.height;
+
+    // --- Cấu hình Trang phục & Chủ đề ---
+    
+    // Định nghĩa Theme
+    const THEMES = {
+        'classic': {
+            name: 'Cổ Điển', pipeColor: '#2ecc71', pipeCapColor: '#34495e',
+            skyGradient: 'linear-gradient(#4eb5ff, #c0f5ff)',
+            groundColor: '#3b2f1e', grassColor: '#5bba47',
+        },
+        'lava': {
+            name: 'Núi Lửa', pipeColor: '#e74c3c', pipeCapColor: '#c0392b',
+            skyGradient: 'linear-gradient(#434343, #222)',
+            groundColor: '#78350f', grassColor: '#f1c40f',
+        },
+        'snow': {
+            name: 'Tuyết', pipeColor: '#bdc3c7', pipeCapColor: '#7f8c8d',
+            skyGradient: 'linear-gradient(#ddeeff, #f8f8ff)',
+            groundColor: '#fff', grassColor: '#ecf0f1',
+        },
+    };
+
+    // Định nghĩa Skin
+    const SKINS = {
+        'yellow': { name: 'Vàng', body: '#f1c40f', outline: '#e67e22', wing: '#e67e22' },
+        'red': { name: 'Đỏ', body: '#e74c3c', outline: '#c0392b', wing: '#c0392b' },
+        'blue': { name: 'Xanh', body: '#3498db', outline: '#2980b9', wing: '#2980b9' },
+    };
+
+    let currentTheme = localStorage.getItem('flappyTheme') || 'classic';
+    let currentSkin = localStorage.getItem('flappySkin') || 'yellow';
+    
+    // --- Cấu hình Game ---
+    
+    // Chim
+    const BIRD_RADIUS = 14;
+    const BIRD_X = width * 0.3;
+    let birdY;
+    let birdVelocity;
+    let birdRotation; // Góc quay của chim
+    let wingFlapTimer = 0; // Thời gian đập cánh tự động
+    let isFlapping = false; // Đánh dấu vừa nhảy để đập cánh mạnh
+    const GRAVITY = 0.35; 
+    const JUMP_STRENGTH = -7.5; 
+    const MAX_ROTATION = Math.PI / 4; 
+    const ROTATION_SPEED = 0.1; 
+    const FLAP_AMPLITUDE = 0.4; // Độ lớn góc đập cánh
+    const FLAP_FREQUENCY = 10; // Tốc độ đập cánh
+
+    // Ống (Dynamic Difficulty)
+    const pipes = [];
+    const PIPE_WIDTH = 70;
+    const PIPE_INTERVAL = 1700; 
+    
+    // BASE VALUES
+    const BASE_PIPE_SPEED = 2.4;
+    const BASE_GAP_HEIGHT = 150;
+    
+    // Dynamic variables
+    let pipeSpeed;
+    let gapHeight;
+    let difficultyLevel;
+    const DIFFICULTY_SCORE_STEP = 5; // Tăng độ khó mỗi 5 điểm
+
+    let pipeSpawnTimer = 0;
+    
+    // Parallax background (Đám mây)
+    const clouds = [
+      { x: 50, y: 100, size: 80, speed: 0.5 },
+      { x: 200, y: 50, size: 120, speed: 0.7 },
+      { x: 350, y: 150, size: 60, speed: 0.6 }
+    ];
+    
+    // Hiệu ứng
+    let shakeIntensity = 0;
+    let particles = [];
+    const SHAKE_DECAY = 0.9;
+    const SHAKE_MAX = 8;
+    const PARTICLE_COUNT = 20;
+
+    // Game state
+    let gameState = "menu"; // "menu" | "playing" | "gameOver"
+    let score = 0;
+    let bestScore = 0;
+    let lastTime = 0;
+    
+    // --- ÂM THANH (SFX) ---
+    let jumpSynth, scoreSynth, hitNoise;
+
+    function initAudio() {
+        if (typeof Tone !== 'undefined') {
+            try {
+                // Chim nhảy: Tiếng trống/lấy hơi
+                jumpSynth = new Tone.MembraneSynth({
+                    pitchDecay: 0.05,
+                    octaves: 1.5,
+                    envelope: { attack: 0.001, decay: 0.2, sustain: 0.01, release: 0.05, }
+                }).toDestination();
+
+                // Ghi điểm: Tiếng Pluck nhẹ
+                scoreSynth = new Tone.PluckSynth({
+                    attackNoise: 1,
+                    dampening: 2000,
+                    resonance: 0.9
+                }).toDestination();
+
+                // Va chạm: Tiếng ồn ngắn
+                hitNoise = new Tone.NoiseSynth({
+                    noise: { type: 'white' },
+                    envelope: { attack: 0.001, decay: 0.2, sustain: 0, }
+                }).toDestination();
+            } catch (e) {
+                console.error("Tone.js initialization failed:", e);
+            }
+        }
+    }
+
+    function playJump() { if (jumpSynth) jumpSynth.triggerAttackRelease("C5", "16n"); }
+    function playScore() { if (scoreSynth) scoreSynth.triggerAttackRelease("G4", 0.1); }
+    function playHit() { if (hitNoise) hitNoise.triggerAttackRelease("4n"); }
+    
+    // --- CÁC HÀM XỬ LÝ CHỦ ĐỀ/TRANG PHỤC ---
+
+    function applyTheme(themeKey) {
+        currentTheme = themeKey;
+        localStorage.setItem('flappyTheme', themeKey);
+        // Cập nhật background CSS ngay lập tức
+        canvas.style.background = THEMES[currentTheme].skyGradient;
+        draw(); // Yêu cầu vẽ lại để áp dụng màu ống
+        renderSettings();
+    }
+
+    function applySkin(skinKey) {
+        currentSkin = skinKey;
+        localStorage.setItem('flappySkin', skinKey);
+        draw(); // Yêu cầu vẽ lại để áp dụng màu chim
+        renderSettings();
+    }
+    
+    // HÀM SỬA LỖI: Nhận event và chặn Propagation để không kích hoạt startGame()
+    function openSettingsModal(e) {
+        if (e) {
+            e.stopPropagation(); // CHẶN click event truyền xuống canvas
+            e.preventDefault(); // Ngăn hành vi mặc định (như gửi form, v.v.)
+        }
+        if (gameState === "playing") return;
+        settingsModal.style.display = 'flex';
+        renderSettings();
+        // Cập nhật lại UI sau khi mở modal để đảm bảo nút bấm không bị tạo lại
+        updateUIState();
+    }
+
+    function closeSettingsModal() {
+        settingsModal.style.display = 'none';
+        // Cập nhật lại UI sau khi đóng modal
+        updateUIState();
+    }
+
+    function renderSettings() {
+        // Render Skins
+        skinGrid.innerHTML = Object.keys(SKINS).map(key => {
+            const skin = SKINS[key];
+            const isSelected = key === currentSkin;
+            return `
+                <div class="item-card ${isSelected ? 'selected' : ''}" onclick="applySkin('${key}')">
+                    <div class="item-preview" style="background-color: ${skin.body}; border-color: ${skin.outline};"></div>
+                    <span>${skin.name}</span>
+                </div>
+            `;
+        }).join('');
+
+        // Render Themes
+        themeGrid.innerHTML = Object.keys(THEMES).map(key => {
+            const theme = THEMES[key];
+            const isSelected = key === currentTheme;
+            return `
+                <div class="item-card ${isSelected ? 'selected' : ''}" onclick="applyTheme('${key}')">
+                    <div class="theme-preview" style="background: ${theme.skyGradient}; border-color: ${theme.groundColor}; border: 3px solid ${theme.pipeColor};"></div>
+                    <span>${theme.name}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    
+    // --- Logic Game ---
+
+    function resetGame() {
+      // Đặt chim ở giữa chiều cao
+      birdY = height / 2;
+      birdVelocity = 0;
+      birdRotation = 0; 
+      wingFlapTimer = 0;
+
+      // Xóa ống
+      pipes.length = 0;
+      pipeSpawnTimer = 0;
+
+      // Reset điểm
+      score = 0;
+      
+      // Reset độ khó
+      pipeSpeed = BASE_PIPE_SPEED;
+      gapHeight = BASE_GAP_HEIGHT;
+      difficultyLevel = 0;
+      
+      // Reset hiệu ứng
+      shakeIntensity = 0;
+      particles.length = 0;
+      
+      // Khởi tạo lại kích thước canvas (để xử lý responsive)
+      resizeCanvas();
+    }
+
+    function startGame() {
+      // Cần kích hoạt Tone.js bằng một hành động của người dùng
+      if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
+        Tone.start().then(() => {
+            performStartGame();
+        }).catch(e => {
+            console.error("Could not start audio context:", e);
+            performStartGame(); // Vẫn chạy game dù không có audio
+        });
+      } else {
+        performStartGame();
+      }
+    }
+    
+    function performStartGame() {
+        closeSettingsModal(); // Đóng modal nếu đang mở
+        resetGame();
+        gameState = "playing";
+        // Cập nhật UI ngay sau khi chuyển trạng thái
+        updateUIState(); 
+    }
+
+
+    function gameOver() {
+      gameState = "gameOver";
+      playHit(); // Chơi âm thanh va chạm
+      shakeIntensity = SHAKE_MAX; // Bắt đầu rung màn hình
+      createExplosion(BIRD_X, birdY); // Tạo hạt bụi
+
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('flappyBestScore', bestScore);
+      }
+      
+      // Cập nhật UI ngay sau khi chuyển trạng thái
+      updateUIState();
+    }
+    
+    // Hàm quản lý trạng thái UI (thay vì làm trong Draw)
+    function updateUIState() {
+        if (settingsModal.style.display === 'flex') {
+            // Nếu modal đang mở, không hiển thị center text
+            centerText.innerHTML = '';
+            return;
+        }
+
+        const settingsButtonHTML = 
+            `<button class="settings-button" onclick="openSettingsModal(event)">Tùy Chỉnh Trang Phục (B)</button>`;
+        
+        if (gameState === "menu") {
+            centerText.innerHTML =
+                `FLAPPY MINI<br/>
+                <span style="font-size: 0.8em; font-weight: 500;">(Đồ án nhỏ)</span><br/><br/>` +
+                `<span style="font-size: 1.1em;">Bấm <b>Space</b> hoặc <b>Click/Touch</b> để bắt đầu</span>` +
+                settingsButtonHTML;
+        } else if (gameState === "gameOver") {
+            // Hệ thống Huy chương (Medal System)
+            let medal = "";
+            if (score >= 40) {
+                medal = "<span style='color: #4dc2ff;'><b>HUY CHƯƠNG KIM CƯƠNG</b> 💎</span>";
+            } else if (score >= 30) {
+                medal = "<span style='color: gold;'><b>HUY CHƯƠNG VÀNG</b> 🥇</span>";
+            } else if (score >= 20) {
+                medal = "<span style='color: silver;'><b>HUY CHƯƠNG BẠC</b> 🥈</span>";
+            } else if (score >= 10) {
+                medal = "<span style='color: #cd7f32;'><b>HUY CHƯƠNG ĐỒNG</b> 🥉</span>";
+            }
+
+            centerText.innerHTML =
+                `GAME OVER<br/>
+                <span style="font-size: 1.1em;">${medal}</span><br/>
+                <span style="font-size: 1.2em;">Điểm: ${score}</span> &nbsp;|&nbsp; Kỷ lục: ${bestScore}<br/><br/>` +
+                `<span style="font-size: 0.8em; font-weight: 500;'>Bấm <b>Space</b> hoặc <b>Click/Touch</b> để chơi lại</span>` + 
+                settingsButtonHTML;
+        } else {
+            // playing
+            centerText.innerHTML = "";
+        }
+    }
+
+
+    function spawnPipe() {
+      const minGapY = 80; 
+      const maxGapY = height - 80 - gapHeight; 
+      
+      if (maxGapY <= minGapY) return; 
+
+      const gapY = minGapY + Math.random() * (maxGapY - minGapY);
+
+      pipes.push({
+        x: width + 20,
+        width: PIPE_WIDTH,
+        gapY: gapY,
+        gapHeight: gapHeight, // Sử dụng gapHeight động
+        passed: false
+      });
+    }
+
+    function createExplosion(x, y) {
+        const skin = SKINS[currentSkin];
+        particles.length = 0;
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            particles.push({
+                x: x,
+                y: y,
+                vx: Math.random() * 8 - 4, 
+                vy: Math.random() * -10,    
+                size: Math.random() * 4 + 2,
+                // Dùng màu skin hiện tại cho hạt bụi
+                color: (i % 2 === 0) ? skin.body : skin.outline, 
+                life: 500 + Math.random() * 500 
+            });
+        }
+    }
+
+    function update(delta) {
+      const deltaFactor = delta / 16.67; 
+      
+      // Update hiệu ứng rung màn hình
+      if (shakeIntensity > 0) {
+          shakeIntensity *= SHAKE_DECAY;
+          if (shakeIntensity < 0.5) shakeIntensity = 0;
+      }
+
+      // Update hạt bụi
+      for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx * deltaFactor;
+          p.y += p.vy * deltaFactor;
+          p.vy += 0.5 * deltaFactor; // Trọng lực tác động lên hạt
+          p.life -= delta;
+          if (p.life <= 0) {
+              particles.splice(i, 1);
+          }
+      }
+
+      if (gameState !== "playing") return;
+
+      // --- DYNAMIC DIFFICULTY SCALING ---
+      const newDifficultyLevel = Math.floor(score / DIFFICULTY_SCORE_STEP);
+      if (newDifficultyLevel > difficultyLevel) {
+          difficultyLevel = newDifficultyLevel;
+          
+          pipeSpeed = Math.min(BASE_PIPE_SPEED + difficultyLevel * 0.2, 4.0);
+          gapHeight = Math.max(BASE_GAP_HEIGHT - difficultyLevel * 10, 100);
+      }
+
+
+      // Update chim
+      birdVelocity += GRAVITY * deltaFactor;
+      birdY += birdVelocity * deltaFactor;
+      
+      // Update timer đập cánh
+      wingFlapTimer += delta * 0.01; 
+
+      // Cập nhật góc quay của chim
+      const targetRotation = Math.min(Math.max(birdVelocity * 0.1, -MAX_ROTATION), MAX_ROTATION * 2);
+      birdRotation = birdRotation + (targetRotation - birdRotation) * ROTATION_SPEED * deltaFactor;
+      
+      // Tắt cờ isFlapping sau khi nhảy
+      if (isFlapping && deltaFactor > 0) {
+        isFlapping = false;
+      }
+
+      // Chim chạm trần hoặc sàn
+      if (birdY - BIRD_RADIUS < 0 || birdY + BIRD_RADIUS > height) {
+        if (birdY + BIRD_RADIUS > height) {
+            birdRotation = MAX_ROTATION;
+        }
+        gameOver();
+        return;
+      }
+      
+      // Cập nhật vị trí Parallax (Mây)
+      for (const cloud of clouds) {
+        cloud.x -= pipeSpeed * cloud.speed * deltaFactor; 
+        if (cloud.x + cloud.size < 0) {
+          cloud.x = width + Math.random() * 100;
+          cloud.y = 50 + Math.random() * (height / 3);
+          cloud.size = 60 + Math.random() * 60;
+        }
+      }
+
+      // Spawn ống mới
+      pipeSpawnTimer += delta;
+      if (pipeSpawnTimer >= PIPE_INTERVAL) {
+        spawnPipe();
+        pipeSpawnTimer = 0;
+      }
+
+      // Update ống
+      for (let i = 0; i < pipes.length; i++) {
+        const pipe = pipes[i];
+        pipe.x -= pipeSpeed * deltaFactor; // Sử dụng pipeSpeed động
+
+        // Tính điểm
+        if (!pipe.passed && pipe.x + pipe.width < BIRD_X) {
+          pipe.passed = true;
+          score++;
+          playScore(); // Chơi âm thanh ghi điểm
+        }
+      }
+
+      // Xóa ống đã đi qua hoàn toàn
+      for (let i = pipes.length - 1; i >= 0; i--) {
+        if (pipes[i].x + pipes[i].width < 0) {
+          pipes.splice(i, 1);
+        }
+      }
+
+      // Kiểm tra va chạm
+      for (const pipe of pipes) {
+        const withinX =
+          BIRD_X + BIRD_RADIUS > pipe.x &&
+          BIRD_X - BIRD_RADIUS < pipe.x + pipe.width;
+
+        if (withinX) {
+          const inGap =
+            birdY - BIRD_RADIUS > pipe.gapY &&
+            birdY + BIRD_RADIUS < pipe.gapY + pipe.gapHeight;
+
+          if (!inGap) {
+            gameOver();
+            return;
+          }
+        }
+      }
+    }
+
+    // --- Hàm Vẽ Game (Draw) ---
+    
+    function drawParallax() {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+        for (const cloud of clouds) {
+            ctx.beginPath();
+            ctx.arc(cloud.x, cloud.y, cloud.size * 0.3, 0, Math.PI * 2);
+            ctx.arc(cloud.x + cloud.size * 0.4, cloud.y, cloud.size * 0.4, 0, Math.PI * 2);
+            ctx.arc(cloud.x - cloud.size * 0.3, cloud.y + cloud.size * 0.1, cloud.size * 0.35, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+
+    function drawBackground() {
+      const theme = THEMES[currentTheme];
+      
+      // Áp dụng background (Bầu trời)
+      canvas.style.background = theme.skyGradient;
+
+      drawParallax(); 
+
+      const groundHeight = 80;
+      ctx.fillStyle = theme.groundColor; 
+      ctx.fillRect(0, height - groundHeight, width, groundHeight);
+
+      ctx.fillStyle = theme.grassColor; 
+      ctx.fillRect(0, height - groundHeight, width, 10);
+    }
+
+    function drawPipes() {
+      const theme = THEMES[currentTheme];
+
+      for (const pipe of pipes) {
+        ctx.fillStyle = theme.pipeColor; 
+
+        // Ống trên
+        ctx.fillRect(pipe.x, 0, pipe.width, pipe.gapY);
+
+        // Ống dưới
+        ctx.fillRect(
+          pipe.x,
+          pipe.gapY + pipe.gapHeight,
+          pipe.width,
+          height - (pipe.gapY + pipe.gapHeight)
+        );
+
+        // Viền ống
+        ctx.strokeStyle = "rgba(0,0,0,0.2)";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(pipe.x, 0, pipe.width, pipe.gapY);
+        ctx.strokeRect(
+          pipe.x,
+          pipe.gapY + pipe.gapHeight,
+          pipe.width,
+          height - (pipe.gapY + pipe.gapHeight)
+        );
+        
+        // Vẽ nắp ống
+        ctx.fillStyle = theme.pipeCapColor; 
+        const capHeight = 30;
+        const capWidth = pipe.width * 1.1; 
+        const capOffset = (capWidth - pipe.width) / 2;
+        
+        ctx.fillRect(pipe.x - capOffset, pipe.gapY - capHeight, capWidth, capHeight);
+        ctx.fillRect(pipe.x - capOffset, pipe.gapY + pipe.gapHeight, capWidth, capHeight);
+        
+        // Viền nắp
+        ctx.strokeStyle = "rgba(0,0,0,0.3)";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(pipe.x - capOffset, pipe.gapY - capHeight, capWidth, capHeight);
+        ctx.strokeRect(pipe.x - capOffset, pipe.gapY + pipe.gapHeight, capWidth, capHeight);
+      }
+    }
+    
+    function drawWing(flapAngle, skin) {
+        // Vẽ cánh (hình tam giác)
+        ctx.save();
+        ctx.translate(-BIRD_RADIUS * 0.8, 0); // Gốc gắn cánh
+        ctx.rotate(flapAngle);
+        
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-12, -15); // Cánh trên
+        ctx.lineTo(-12, 10);  // Cánh dưới
+        ctx.closePath();
+        ctx.fillStyle = skin.wing; // Màu cánh theo skin
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawBird() {
+      const skin = SKINS[currentSkin];
+      
+      // Bắt đầu xử lý Rotation
+      ctx.save();
+      
+      // Di chuyển gốc tọa độ về tâm chim
+      ctx.translate(BIRD_X, birdY);
+      // Xoay
+      ctx.rotate(birdRotation);
+      
+      // Tính toán góc đập cánh (Sin wave)
+      const autoFlapAngle = Math.sin(wingFlapTimer * FLAP_FREQUENCY) * FLAP_AMPLITUDE; 
+      // Manual flap (chỉ xảy ra khi isFlapping == true)
+      const manualFlap = isFlapping ? -MAX_ROTATION : 0; 
+
+      // 0. Vẽ Cánh
+      drawWing(autoFlapAngle + manualFlap, skin);
+      
+      // 1. Thân
+      ctx.beginPath();
+      ctx.arc(0, 0, BIRD_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = skin.body; // Màu thân theo skin
+      ctx.fill();
+      
+      // Viền thân
+      ctx.strokeStyle = skin.outline; // Màu viền theo skin
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 2. Mắt (Phần trắng)
+      ctx.beginPath();
+      ctx.arc(5, -4, 3, 0, Math.PI * 2);
+      ctx.fillStyle = "#fff";
+      ctx.fill();
+
+      // 3. Con ngươi (Phần đen)
+      ctx.beginPath();
+      ctx.arc(5, -4, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = "#000";
+      ctx.fill();
+
+      // 4. Mỏ (Màu cam, giữ nguyên)
+      ctx.beginPath();
+      ctx.moveTo(BIRD_RADIUS, 0);
+      ctx.lineTo(BIRD_RADIUS + 8, 4);
+      ctx.lineTo(BIRD_RADIUS + 8, -4);
+      ctx.closePath();
+      ctx.fillStyle = "#e67e22";
+      ctx.fill();
+      
+      // Kết thúc xử lý Rotation
+      ctx.restore();
+    }
+    
+    function drawParticles() {
+        for (const p of particles) {
+            ctx.fillStyle = p.color;
+            // Độ trong suốt giảm dần theo thời gian sống
+            ctx.globalAlpha = p.life / 1000; 
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1; // Reset alpha
+    }
+
+
+    function draw() {
+      // Áp dụng Screen Shake
+      const shakeX = shakeIntensity > 0 ? (Math.random() * 2 - 1) * shakeIntensity : 0;
+      const shakeY = shakeIntensity > 0 ? (Math.random() * 2 - 1) * shakeIntensity : 0;
+      
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      
+      // Xóa toàn bộ canvas để vẽ lại
+      ctx.clearRect(0, 0, width, height);
+
+      drawBackground();
+      drawPipes();
+      
+      // Chỉ vẽ chim nếu không phải trạng thái GAME OVER (đã nổ thành particles)
+      if (gameState !== "gameOver" || particles.length === 0) {
+        drawBird();
+      }
+      
+      drawParticles(); // Vẽ hạt bụi
+
+      // Vẽ điểm lớn trên canvas
+      ctx.fillStyle = "rgba(255,255,255,0.4)";
+      ctx.font = "36px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(score, width / 2, 60);
+
+      // Cập nhật overlay
+      scoreOverlay.textContent = `Điểm: ${score} | Kỷ lục: ${bestScore} | Độ khó: ${difficultyLevel}`;
+      
+      ctx.restore(); // Kết thúc Screen Shake
+    }
+
+    // --- Vòng lặp Game (requestAnimationFrame) ---
+
+    function loop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const delta = timestamp - lastTime;
+      lastTime = timestamp;
+
+      // Giới hạn delta time
+      const limitedDelta = Math.min(delta, 1000 / 30); 
+
+      update(limitedDelta);
+      draw();
+
+      requestAnimationFrame(loop);
+    }
+
+    // --- Xử lý Input & Responsive ---
+    
+    function handleInput() {
+      // Chỉ nhận input khi không ở trong modal
+      if (settingsModal.style.display === 'flex') return;
+      
+      if (gameState === "menu") {
+        startGame();
+      } else if (gameState === "playing") {
+        birdVelocity = JUMP_STRENGTH;
+        birdRotation = -MAX_ROTATION; 
+        isFlapping = true; // Kích hoạt đập cánh thủ công
+        playJump(); // Chơi âm thanh nhảy
+      } else if (gameState === "gameOver") {
+        startGame();
+      }
+    }
+    
+    function resizeCanvas() {
+        const container = document.getElementById('game-container');
+        width = container.clientWidth;
+        height = container.clientHeight;
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const storedScore = localStorage.getItem('flappyBestScore');
+        if (storedScore) {
+            bestScore = parseInt(storedScore, 10);
+        }
+        
+        // Cập nhật background khi resize
+        canvas.style.background = THEMES[currentTheme].skyGradient;
+    }
+
+    // Input: keyboard (Spacebar & Settings Shortcut)
+    window.addEventListener("keydown", (e) => {
+      // 1. Phím Space để nhảy/bắt đầu
+      if (e.code === "Space" || e.key === " ") {
+        e.preventDefault();
+        handleInput();
+      } 
+      
+      // 2. Phím 'B' (Bật/Tắt Cài đặt)
+      else if (e.key.toLowerCase() === 'b') {
+        // Chỉ hoạt động khi không đang chơi
+        if (gameState !== "playing") {
+          e.preventDefault();
+          if (settingsModal.style.display === 'flex') {
+            closeSettingsModal();
+          } else {
+            openSettingsModal(e);
+          }
+        }
+      }
+    });
+
+    // Input: mouse / touch
+    canvas.addEventListener("mousedown", () => {
+      handleInput();
+    });
+    
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      handleInput();
+    }, { passive: false });
+    
+    window.addEventListener('resize', resizeCanvas);
+
+
+    // --- Khởi tạo và Bắt đầu ---
+    initAudio(); // Khởi tạo các bộ tổng hợp âm thanh
+    resizeCanvas();
+    resetGame();
+    renderSettings(); // Render UI chọn theme/skin
+    updateUIState(); // Khởi tạo trạng thái UI ban đầu
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

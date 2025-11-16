@@ -1,0 +1,59 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw*
+
+# Node
+node_modules/
+/.pnp
+.pnp.js
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js
+/.next/
+/out/
+.next.cache/
+.swc/
+.eslintcache
+
+# Build / Dist / Caches
+/build/
+/dist/
+/coverage/
+/.cache/
+/.turbo/
+/.parcel-cache/
+/storybook-static/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Env files (keep secrets out of git)
+.env
+.env*.local
+
+# Hosting / Platform
+.vercel
+
+# Certificates / keys
+*.pem
+
+# Documentation
+/doc
+/docs
+# Documentation (ignore)
+/doc
+/docs
