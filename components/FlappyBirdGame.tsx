@@ -1045,6 +1045,20 @@ export default function FlappyBirdGame() {
             </button>
           )}
         </div>
+        <div style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: 6, fontSize: 14 }}>
+          {userFid ? (
+            <span>Connected: fid {userFid}</span>
+          ) : (
+            <button
+              onClick={loginWithFarcaster}
+              disabled={authLoading}
+              className={styles.settingsButton}
+              style={{ margin: 0, padding: '6px 10px' }}
+            >
+              {authLoading ? 'Connecting…' : 'Login (Farcaster)'}
+            </button>
+          )}
+        </div>
         <div ref={centerTextRef} className={styles.centerText}></div>
 
         <div
