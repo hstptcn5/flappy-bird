@@ -15,7 +15,7 @@ interface Theme {
   grassColor: string
 }
 
-interface Skin {
+interface SkinColor {
   name: string
   body: string
   outline: string
@@ -49,7 +49,7 @@ interface Particle {
 
 const THEMES: Record<string, Theme> = {
   classic: {
-    name: 'Cổ Điển',
+    name: 'Classic',
     pipeColor: '#2ecc71',
     pipeCapColor: '#34495e',
     skyGradient: 'linear-gradient(#4eb5ff, #c0f5ff)',
@@ -57,27 +57,58 @@ const THEMES: Record<string, Theme> = {
     grassColor: '#5bba47',
   },
   lava: {
-    name: 'Núi Lửa',
+    name: 'Lava',
     pipeColor: '#e74c3c',
     pipeCapColor: '#c0392b',
     skyGradient: 'linear-gradient(#434343, #222)',
     groundColor: '#78350f',
     grassColor: '#f1c40f',
   },
-  snow: {
-    name: 'Tuyết',
-    pipeColor: '#bdc3c7',
-    pipeCapColor: '#7f8c8d',
-    skyGradient: 'linear-gradient(#ddeeff, #f8f8ff)',
-    groundColor: '#fff',
-    grassColor: '#ecf0f1',
+  ocean: {
+    name: 'Ocean',
+    pipeColor: '#1abc9c',
+    pipeCapColor: '#0e8a74',
+    skyGradient: 'linear-gradient(#5dade2, #a9eaf7)',
+    groundColor: '#1f2a44',
+    grassColor: '#2ecc71',
+  },
+  sunset: {
+    name: 'Sunset',
+    pipeColor: '#f39c12',
+    pipeCapColor: '#d35400',
+    skyGradient: 'linear-gradient(#ff9a9e, #fad0c4)',
+    groundColor: '#5d4037',
+    grassColor: '#f1c40f',
+  },
+  neon: {
+    name: 'Neon',
+    pipeColor: '#e91e63',
+    pipeCapColor: '#9c27b0',
+    skyGradient: 'linear-gradient(#141e30, #243b55)',
+    groundColor: '#0f0f1a',
+    grassColor: '#00e676',
+  },
+  forest: {
+    name: 'Forest',
+    pipeColor: '#2e7d32',
+    pipeCapColor: '#1b5e20',
+    skyGradient: 'linear-gradient(#b7e4c7, #74c69d)',
+    groundColor: '#3e2f1e',
+    grassColor: '#4caf50',
   },
 }
 
-const SKINS: Record<string, Skin> = {
-  yellow: { name: 'Vàng', body: '#f1c40f', outline: '#e67e22', wing: '#e67e22' },
-  red: { name: 'Đỏ', body: '#e74c3c', outline: '#c0392b', wing: '#c0392b' },
-  blue: { name: 'Xanh', body: '#3498db', outline: '#2980b9', wing: '#2980b9' },
+// Fallback vector skin if image not available
+const DEFAULT_VECTOR_SKIN: SkinColor = { name: 'Default', body: '#f1c40f', outline: '#e67e22', wing: '#e67e22' }
+
+// Image-based skins: expect files in /public named 1.png ... 6.png
+const IMAGE_SKIN_KEYS = ['img1','img2','img3','img4','img5','img6'] as const
+type ImageSkinKey = typeof IMAGE_SKIN_KEYS[number]
+
+function getImagePathForSkin(key: string): string | null {
+  const m = key.match(/^img([1-6])$/)
+  if (!m) return null
+  return `/${m[1]}.png`
 }
 
 export default function FlappyBirdGame() {
@@ -103,7 +134,8 @@ export default function FlappyBirdGame() {
   const themeGridRef = useRef<HTMLDivElement>(null)
 
   const [currentTheme, setCurrentTheme] = useState<string>('classic')
-  const [currentSkin, setCurrentSkin] = useState<string>('yellow')
+  const currentThemeRef = useRef<string>('classic')
+  const [currentSkin, setCurrentSkin] = useState<string>('img1')
   const [gameState, setGameState] = useState<'menu' | 'playing' | 'gameOver'>('menu')
   const [score, setScore] = useState(0)
   const [bestScore, setBestScore] = useState(0)
@@ -137,6 +169,18 @@ export default function FlappyBirdGame() {
   const hitNoiseRef = useRef<any>(null)
   const birdImageRef = useRef<HTMLImageElement | null>(null)
   const birdImageLoadedRef = useRef(false)
+  const bgImageRef = useRef<HTMLImageElement | null>(null)
+  const bgLoadedRef = useRef(false)
+  const pipeImageRef = useRef<HTMLImageElement | null>(null)
+  const pipeLoadedRef = useRef(false)
+  const pipeCapImageRef = useRef<HTMLImageElement | null>(null)
+  const pipeCapLoadedRef = useRef(false)
+  const groundImageRef = useRef<HTMLImageElement | null>(null)
+  const groundLoadedRef = useRef(false)
+  const grassImageRef = useRef<HTMLImageElement | null>(null)
+  const grassLoadedRef = useRef(false)
+  const cloudImageRef = useRef<HTMLImageElement | null>(null)
+  const cloudLoadedRef = useRef(false)
 
   // Constants
   const BIRD_RADIUS = 14
@@ -197,8 +241,12 @@ export default function FlappyBirdGame() {
   // Load saved preferences
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('flappyTheme') || 'classic'
-      const savedSkin = localStorage.getItem('flappySkin') || 'yellow'
+      let savedTheme = localStorage.getItem('flappyTheme') || 'classic'
+      if (!Object.prototype.hasOwnProperty.call(THEMES, savedTheme)) {
+        savedTheme = 'classic'
+        localStorage.setItem('flappyTheme', 'classic')
+      }
+      const savedSkin = localStorage.getItem('flappySkin') || 'img1'
       const savedBestScore = localStorage.getItem('flappyBestScore')
       setCurrentTheme(savedTheme)
       setCurrentSkin(savedSkin)
@@ -206,17 +254,36 @@ export default function FlappyBirdGame() {
         setBestScore(parseInt(savedBestScore, 10))
       }
 
-      // Try to load custom bird image from public/1.png
-      const img = new Image()
-      img.onload = () => {
-        birdImageRef.current = img
-        birdImageLoadedRef.current = true
-      }
-      img.onerror = () => {
+      // Load image for current skin if applicable
+      const path = getImagePathForSkin(savedSkin)
+      if (path) {
+        const img = new Image()
+        img.onload = () => {
+          birdImageRef.current = img
+          birdImageLoadedRef.current = true
+        }
+        img.onerror = () => {
+          birdImageLoadedRef.current = false
+        }
+        img.src = path
+      } else {
         birdImageLoadedRef.current = false
       }
-      // Put your sprite at public/1.png
-      img.src = '/1.png'
+
+      // Preload environment assets
+      const load = (src: string, onOk: (img: HTMLImageElement) => void, onFail?: () => void) => {
+        const i = new Image()
+        i.onload = () => onOk(i)
+        i.onerror = () => onFail && onFail()
+        i.src = src
+      }
+
+      load('/bg_sky.png', (i) => { bgImageRef.current = i; bgLoadedRef.current = true })
+      load('/pipe.png', (i) => { pipeImageRef.current = i; pipeLoadedRef.current = true })
+      load('/pipe_cap.png', (i) => { pipeCapImageRef.current = i; pipeCapLoadedRef.current = true })
+      load('/ground.png', (i) => { groundImageRef.current = i; groundLoadedRef.current = true })
+      load('/grass.png', (i) => { grassImageRef.current = i; grassLoadedRef.current = true })
+      load('/cloud.png', (i) => { cloudImageRef.current = i; cloudLoadedRef.current = true })
     }
   }, [])
 
@@ -225,6 +292,11 @@ export default function FlappyBirdGame() {
     gameStateRef.current = gameState
     scoreRef.current = score
   }, [gameState, score])
+
+  // Keep theme in ref for RAF loop
+  useEffect(() => {
+    currentThemeRef.current = currentTheme
+  }, [currentTheme])
 
   const applyTheme = (themeKey: string) => {
     setCurrentTheme(themeKey)
@@ -241,6 +313,21 @@ export default function FlappyBirdGame() {
     setCurrentSkin(skinKey)
     if (typeof window !== 'undefined') {
       localStorage.setItem('flappySkin', skinKey)
+    }
+    // Load image if this skin is image-based
+    const path = getImagePathForSkin(skinKey)
+    if (path) {
+      const img = new Image()
+      img.onload = () => {
+        birdImageRef.current = img
+        birdImageLoadedRef.current = true
+      }
+      img.onerror = () => {
+        birdImageLoadedRef.current = false
+      }
+      img.src = path
+    } else {
+      birdImageLoadedRef.current = false
     }
     renderSettings()
   }
@@ -263,18 +350,16 @@ export default function FlappyBirdGame() {
 
   const renderSettings = () => {
     if (skinGridRef.current) {
-      skinGridRef.current.innerHTML = Object.keys(SKINS)
-        .map((key) => {
-          const skin = SKINS[key]
-          const isSelected = key === currentSkin
-          return `
-            <div class="${styles.itemCard} ${isSelected ? styles.selected : ''}" onclick="window.applySkin('${key}')">
-              <div class="${styles.itemPreview}" style="background-color: ${skin.body}; border-color: ${skin.outline};"></div>
-              <span>${skin.name}</span>
-            </div>
-          `
-        })
-        .join('')
+      skinGridRef.current.innerHTML = IMAGE_SKIN_KEYS.map((key, idx) => {
+        const isSelected = key === currentSkin
+        const num = idx + 1
+        return `
+          <div class="${styles.itemCard} ${isSelected ? styles.selected : ''}" onclick="window.applySkin('${key}')">
+            <div class="${styles.itemPreview}" style="background: url('/${num}.png') center/cover no-repeat; border-color: white;"></div>
+            <span>Skin ${num}</span>
+          </div>
+        `
+      }).join('')
     }
 
     if (themeGridRef.current) {
@@ -396,33 +481,33 @@ export default function FlappyBirdGame() {
       return
     }
 
-    const settingsButtonHTML = `<button class="${styles.settingsButton}" onclick="window.openSettings()">Tùy Chỉnh Trang Phục (B)</button>`
+    const settingsButtonHTML = `<button class="${styles.settingsButton}" onclick="window.openSettings()">Customize (B)</button>`
 
     if (gameState === 'menu') {
       centerTextRef.current.innerHTML = `
         FLAPPY MINI<br/>
-        <span style="font-size: 0.8em; font-weight: 500;">(Đồ án nhỏ)</span><br/><br/>
-        <span style="font-size: 1.1em;">Bấm <b>Space</b> hoặc <b>Click/Touch</b> để bắt đầu</span>
+        <span style="font-size: 0.8em; font-weight: 500;">(Mini project)</span><br/><br/>
+        <span style="font-size: 1.1em;">Press <b>Space</b> or <b>Click/Touch</b> to start</span>
         ${settingsButtonHTML}
       `
     } else if (gameState === 'gameOver') {
       const displayedBest = Math.max(bestScore, score)
       let medal = ''
       if (score >= 40) {
-        medal = "<span style='color: #4dc2ff;'><b>HUY CHƯƠNG KIM CƯƠNG</b> 💎</span>"
+        medal = "<span style='color: #4dc2ff;'><b>DIAMOND MEDAL</b> 💎</span>"
       } else if (score >= 30) {
-        medal = "<span style='color: gold;'><b>HUY CHƯƠNG VÀNG</b> 🥇</span>"
+        medal = "<span style='color: gold;'><b>GOLD MEDAL</b> 🥇</span>"
       } else if (score >= 20) {
-        medal = "<span style='color: silver;'><b>HUY CHƯƠNG BẠC</b> 🥈</span>"
+        medal = "<span style='color: silver;'><b>SILVER MEDAL</b> 🥈</span>"
       } else if (score >= 10) {
-        medal = "<span style='color: #cd7f32;'><b>HUY CHƯƠNG ĐỒNG</b> 🥉</span>"
+        medal = "<span style='color: #cd7f32;'><b>BRONZE MEDAL</b> 🥉</span>"
       }
 
       centerTextRef.current.innerHTML = `
         GAME OVER<br/>
         <span style="font-size: 1.1em;">${medal}</span><br/>
-        <span style="font-size: 1.2em;">Điểm: ${score}</span> &nbsp;|&nbsp; Kỷ lục: ${displayedBest}<br/><br/>
-        <span style="font-size: 0.8em; font-weight: 500;">Bấm <b>Space</b> hoặc <b>Click/Touch</b> để chơi lại</span>
+        <span style="font-size: 1.2em;">Score: ${score}</span> &nbsp;|&nbsp; Best: ${displayedBest}<br/><br/>
+        <span style="font-size: 0.8em; font-weight: 500;">Press <b>Space</b> or <b>Click/Touch</b> to retry</span>
         ${settingsButtonHTML}
       `
     } else {
@@ -462,7 +547,7 @@ export default function FlappyBirdGame() {
   }
 
   const createExplosion = () => {
-    const skin = SKINS[currentSkin]
+    const skin = DEFAULT_VECTOR_SKIN
     particlesRef.current = []
     const birdX = canvasRef.current ? canvasRef.current.width * 0.3 : 120
 
@@ -490,65 +575,77 @@ export default function FlappyBirdGame() {
     canvas.width = width
     canvas.height = height
 
-    canvas.style.background = THEMES[currentTheme].skyGradient
+    const theme = THEMES[currentThemeRef.current] || THEMES.classic
+    canvas.style.background = theme.skyGradient
   }
 
   // Drawing functions
   const drawParallax = (ctx: CanvasRenderingContext2D) => {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)'
-    for (const cloud of cloudsRef.current) {
-      ctx.beginPath()
-      ctx.arc(cloud.x, cloud.y, cloud.size * 0.3, 0, Math.PI * 2)
-      ctx.arc(cloud.x + cloud.size * 0.4, cloud.y, cloud.size * 0.4, 0, Math.PI * 2)
-      ctx.arc(cloud.x - cloud.size * 0.3, cloud.y + cloud.size * 0.1, cloud.size * 0.35, 0, Math.PI * 2)
-      ctx.fill()
+    const clouds = cloudsRef.current
+    if (cloudLoadedRef.current && cloudImageRef.current) {
+      for (const cloud of clouds) {
+        const w = cloud.size
+        const h = cloud.size * 0.6
+        ctx.drawImage(cloudImageRef.current, cloud.x - w * 0.5, cloud.y - h * 0.5, w, h)
+      }
+    } else {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)'
+      for (const cloud of clouds) {
+        ctx.beginPath()
+        ctx.arc(cloud.x, cloud.y, cloud.size * 0.3, 0, Math.PI * 2)
+        ctx.arc(cloud.x + cloud.size * 0.4, cloud.y, cloud.size * 0.4, 0, Math.PI * 2)
+        ctx.arc(cloud.x - cloud.size * 0.3, cloud.y + cloud.size * 0.1, cloud.size * 0.35, 0, Math.PI * 2)
+        ctx.fill()
+      }
     }
   }
 
   const drawBackground = (ctx: CanvasRenderingContext2D) => {
-    const theme = THEMES[currentTheme]
+    const theme = THEMES[currentThemeRef.current] || THEMES.classic
     const canvas = canvasRef.current
     if (!canvas) return
 
+    // Sky: revert to gradient
     canvas.style.background = theme.skyGradient
 
     drawParallax(ctx)
 
     const groundHeight = 80
     const height = canvas.height
+
+    // Ground: revert to vector
     ctx.fillStyle = theme.groundColor
     ctx.fillRect(0, height - groundHeight, canvas.width, groundHeight)
 
+    // Grass: revert to vector
     ctx.fillStyle = theme.grassColor
     ctx.fillRect(0, height - groundHeight, canvas.width, 10)
   }
 
   const drawPipes = (ctx: CanvasRenderingContext2D) => {
-    const theme = THEMES[currentTheme]
+    const theme = THEMES[currentThemeRef.current] || THEMES.classic
     const canvas = canvasRef.current
     if (!canvas) return
 
     const height = canvas.height
 
     for (const pipe of pipesRef.current) {
+      // Vector pipes (reverted)
       ctx.fillStyle = theme.pipeColor
-
       ctx.fillRect(pipe.x, 0, pipe.width, pipe.gapY)
       ctx.fillRect(pipe.x, pipe.gapY + pipe.gapHeight, pipe.width, height - (pipe.gapY + pipe.gapHeight))
-
       ctx.strokeStyle = 'rgba(0,0,0,0.2)'
       ctx.lineWidth = 3
       ctx.strokeRect(pipe.x, 0, pipe.width, pipe.gapY)
       ctx.strokeRect(pipe.x, pipe.gapY + pipe.gapHeight, pipe.width, height - (pipe.gapY + pipe.gapHeight))
 
-      ctx.fillStyle = theme.pipeCapColor
+      // Caps
       const capHeight = 30
       const capWidth = pipe.width * 1.1
       const capOffset = (capWidth - pipe.width) / 2
-
+      ctx.fillStyle = theme.pipeCapColor
       ctx.fillRect(pipe.x - capOffset, pipe.gapY - capHeight, capWidth, capHeight)
       ctx.fillRect(pipe.x - capOffset, pipe.gapY + pipe.gapHeight, capWidth, capHeight)
-
       ctx.strokeStyle = 'rgba(0,0,0,0.3)'
       ctx.lineWidth = 3
       ctx.strokeRect(pipe.x - capOffset, pipe.gapY - capHeight, capWidth, capHeight)
@@ -556,7 +653,7 @@ export default function FlappyBirdGame() {
     }
   }
 
-  const drawWing = (ctx: CanvasRenderingContext2D, flapAngle: number, skin: Skin) => {
+  const drawWing = (ctx: CanvasRenderingContext2D, flapAngle: number, skin: SkinColor) => {
     ctx.save()
     ctx.translate(-BIRD_RADIUS * 0.8, 0)
     ctx.rotate(flapAngle)
@@ -599,7 +696,7 @@ export default function FlappyBirdGame() {
       )
     } else {
       // Fallback: vector bird with wing animation
-      const skin = SKINS[currentSkin]
+      const skin = DEFAULT_VECTOR_SKIN
 
       ctx.beginPath()
       ctx.arc(0, 0, BIRD_RADIUS, 0, Math.PI * 2)
@@ -674,7 +771,7 @@ export default function FlappyBirdGame() {
 
     if (scoreOverlayRef.current) {
       const displayedBest = Math.max(bestScore, scoreRef.current)
-      scoreOverlayRef.current.textContent = `Điểm: ${scoreRef.current} | Kỷ lục: ${displayedBest} | Độ khó: ${difficultyLevel}`
+      scoreOverlayRef.current.textContent = `Score: ${scoreRef.current} | Best: ${displayedBest} | Level: ${difficultyLevel}`
     }
 
     ctx.restore()
@@ -923,20 +1020,20 @@ export default function FlappyBirdGame() {
           className={styles.settingsModal}
           style={{ display: isSettingsOpen ? 'flex' : 'none' }}
         >
-          <h2 style={{ marginBottom: '20px', fontSize: '2em', color: 'gold' }}>CỬA HÀNG & CÀI ĐẶT</h2>
+          <h2 style={{ marginBottom: '20px', fontSize: '2em', color: 'gold' }}>SHOP & SETTINGS</h2>
 
           <div className={styles.shopSection}>
-            <h3>Chọn Trang Phục Chim</h3>
+            <h3>Select Bird Skin</h3>
             <div ref={skinGridRef} className={styles.selectionGrid}></div>
           </div>
 
           <div className={styles.shopSection}>
-            <h3>Chọn Chủ Đề Màn Chơi</h3>
+            <h3>Select Theme</h3>
             <div ref={themeGridRef} className={styles.selectionGrid}></div>
           </div>
 
           <button className={styles.settingsButton} onClick={closeSettingsModal} style={{ marginTop: '30px', backgroundColor: '#e74c3c', boxShadow: '0 4px #c0392b' }}>
-            ĐÓNG
+            CLOSE
           </button>
         </div>
 
@@ -945,11 +1042,11 @@ export default function FlappyBirdGame() {
           style={{ display: isLeaderboardOpen ? 'flex' : 'none' }}
         >
           <div className={styles.leaderboardHeader}>
-            <div className={styles.leaderboardTitle}>Bảng Xếp Hạng (Top 10)</div>
+            <div className={styles.leaderboardTitle}>Leaderboard (Top 10)</div>
           </div>
           <div className={styles.leaderboardList}>
             {leaderboard.length === 0 ? (
-              <div style={{ opacity: 0.8, textAlign: 'center' }}>Chưa có dữ liệu</div>
+              <div style={{ opacity: 0.8, textAlign: 'center' }}>No data yet</div>
             ) : (
               leaderboard.map((row, idx) => (
                 <div key={`${row.fid}-${idx}`} className={styles.leaderboardItem}>
@@ -960,7 +1057,7 @@ export default function FlappyBirdGame() {
               ))
             )}
           </div>
-          <button className={styles.lbClose} onClick={toggleLeaderboard}>ĐÓNG (L)</button>
+          <button className={styles.lbClose} onClick={toggleLeaderboard}>CLOSE (L)</button>
         </div>
       </div>
     </>
