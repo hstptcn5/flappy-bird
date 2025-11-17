@@ -19,19 +19,17 @@ export default function Home() {
     })
 
     // Try to get Farcaster context
-    let fid: number | undefined
-    try {
-      sdk.context.get().then((ctx: any) => {
-        fid = ctx?.user?.fid
-        if (fid) {
-          console.log('✅ Farcaster FID detected:', fid)
-        }
-      }).catch(() => {
-        console.log('ℹ️ Not in Farcaster environment (normal for dev)')
-      })
-    } catch (e) {
-      console.log('ℹ️ SDK context not available')
-    }
+    // sdk.context is already a Promise<MiniAppContext>
+    Promise.resolve(sdk.context).then((ctx: any) => {
+      const fid = ctx?.user?.fid
+      if (typeof fid === 'number') {
+        console.log('✅ Farcaster FID detected:', fid)
+      } else {
+        console.log('ℹ️ No FID in context (normal outside Farcaster)')
+      }
+    }).catch(() => {
+      console.log('ℹ️ Not in Farcaster environment (normal for dev)')
+    })
 
     // Call ready() with error logging
     const initSdk = async () => {
