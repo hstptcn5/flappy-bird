@@ -117,11 +117,18 @@ export default function FlappyBirdGame() {
   useEffect(() => {
     (async () => {
       try {
+        console.log('🔍 Attempting to get Farcaster context...')
         const ctx = (await (sdk as any)?.context?.get?.()) ?? (sdk as any)?.context
         const fid = ctx?.user?.fid
-        if (typeof fid === 'number') setUserFid(fid)
-      } catch (e) {
-        // ignore if not in miniapp
+        if (typeof fid === 'number') {
+          console.log('✅ Got FID from context:', fid)
+          setUserFid(fid)
+        } else {
+          console.log('ℹ️ No FID in context (normal outside Farcaster)')
+        }
+      } catch (e: any) {
+        console.warn('⚠️ Failed to get Farcaster context:', e?.message || e)
+        // ignore if not in miniapp - this is expected
       }
     })()
   }, [])
