@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { sdk } from '@farcaster/miniapp-sdk'
 import FlappyBirdGame from '@/components/FlappyBirdGame'
 import { ErrorBoundary } from './error-boundary'
-import { setupErrorHandlers, logError } from '@/lib/error-logger'
+import { setupErrorHandlers, logError } from '../lib/error-logger'
 
 export default function Home() {
   useEffect(() => {
