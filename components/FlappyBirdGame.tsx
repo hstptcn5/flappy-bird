@@ -258,18 +258,38 @@ export default function FlappyBirdGame() {
 
   // Load saved preferences
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      let savedTheme = localStorage.getItem('flappyTheme') || 'classic'
+    if (typeof window === 'undefined') return
+
+    try {
+      let savedTheme = 'classic'
+      let savedSkin = 'img1'
+      let savedBestScore: string | null = null
+
+      try {
+        savedTheme = localStorage.getItem('flappyTheme') || 'classic'
+        savedSkin = localStorage.getItem('flappySkin') || 'img1'
+        savedBestScore = localStorage.getItem('flappyBestScore')
+      } catch (storageError) {
+        // localStorage may be disabled or unavailable
+        console.warn('localStorage not available, using defaults:', storageError)
+      }
+
       if (!Object.prototype.hasOwnProperty.call(THEMES, savedTheme)) {
         savedTheme = 'classic'
-        localStorage.setItem('flappyTheme', 'classic')
+        try {
+          localStorage.setItem('flappyTheme', 'classic')
+        } catch {
+          // Ignore storage errors
+        }
       }
-      const savedSkin = localStorage.getItem('flappySkin') || 'img1'
-      const savedBestScore = localStorage.getItem('flappyBestScore')
+      
       setCurrentTheme(savedTheme)
       setCurrentSkin(savedSkin)
       if (savedBestScore) {
-        setBestScore(parseInt(savedBestScore, 10))
+        const parsed = parseInt(savedBestScore, 10)
+        if (!isNaN(parsed)) {
+          setBestScore(parsed)
+        }
       }
 
       // Load image for current skin if applicable
@@ -290,10 +310,15 @@ export default function FlappyBirdGame() {
 
       // Preload environment assets
       const load = (src: string, onOk: (img: HTMLImageElement) => void, onFail?: () => void) => {
-        const i = new Image()
-        i.onload = () => onOk(i)
-        i.onerror = () => onFail && onFail()
-        i.src = src
+        try {
+          const i = new Image()
+          i.onload = () => onOk(i)
+          i.onerror = () => onFail && onFail()
+          i.src = src
+        } catch (error) {
+          console.warn('Failed to load image:', src, error)
+          onFail && onFail()
+        }
       }
 
       load('/bg_sky.png', (i) => { bgImageRef.current = i; bgLoadedRef.current = true })
@@ -302,6 +327,11 @@ export default function FlappyBirdGame() {
       load('/ground.png', (i) => { groundImageRef.current = i; groundLoadedRef.current = true })
       load('/grass.png', (i) => { grassImageRef.current = i; grassLoadedRef.current = true })
       load('/cloud.png', (i) => { cloudImageRef.current = i; cloudLoadedRef.current = true })
+    } catch (error) {
+      console.error('Error loading preferences:', error)
+      // Set defaults and continue
+      setCurrentTheme('classic')
+      setCurrentSkin('img1')
     }
   }, [])
 
@@ -319,7 +349,11 @@ export default function FlappyBirdGame() {
   const applyTheme = (themeKey: string) => {
     setCurrentTheme(themeKey)
     if (typeof window !== 'undefined') {
-      localStorage.setItem('flappyTheme', themeKey)
+      try {
+        localStorage.setItem('flappyTheme', themeKey)
+      } catch (error) {
+        console.warn('Failed to save theme to localStorage:', error)
+      }
     }
     if (canvasRef.current) {
       canvasRef.current.style.background = THEMES[themeKey].skyGradient
@@ -330,7 +364,11 @@ export default function FlappyBirdGame() {
   const applySkin = (skinKey: string) => {
     setCurrentSkin(skinKey)
     if (typeof window !== 'undefined') {
-      localStorage.setItem('flappySkin', skinKey)
+      try {
+        localStorage.setItem('flappySkin', skinKey)
+      } catch (error) {
+        console.warn('Failed to save skin to localStorage:', error)
+      }
     }
     // Load image if this skin is image-based
     const path = getImagePathForSkin(skinKey)
@@ -472,7 +510,11 @@ export default function FlappyBirdGame() {
       const newBest = score
       setBestScore(newBest)
       if (typeof window !== 'undefined') {
-        localStorage.setItem('flappyBestScore', newBest.toString())
+        try {
+          localStorage.setItem('flappyBestScore', newBest.toString())
+        } catch (error) {
+          console.warn('Failed to save best score to localStorage:', error)
+        }
       }
       // Save to Supabase (server) with Farcaster fid if available
       if (userFid) {

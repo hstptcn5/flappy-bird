@@ -8,12 +8,38 @@ interface ValidationResult {
   details?: any
 }
 
-async function checkUrlExists(url: string): Promise<boolean> {
+async function checkUrlExists(url: string): Promise<{ exists: boolean; status?: number; statusText?: string }> {
   try {
-    const response = await fetch(url, { method: 'HEAD' })
-    return response.ok
-  } catch {
-    return false
+    // Use GET with timeout and proper headers for Vercel serverless
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+    
+    const response = await fetch(url, { 
+      method: 'GET',
+      headers: {
+        'Cache-Control': 'no-cache',
+        'User-Agent': 'Mozilla/5.0 (compatible; Farcaster-Manifest-Validator/1.0)',
+      },
+      signal: controller.signal,
+    })
+    
+    clearTimeout(timeoutId)
+    
+    return {
+      exists: response.ok,
+      status: response.status,
+      statusText: response.statusText,
+    }
+  } catch (error) {
+    // Network errors can happen when server-side fetches to itself on Vercel
+    // This might be a false negative - images may still exist
+    return {
+      exists: false,
+      status: 0,
+      statusText: error instanceof Error 
+        ? (error.name === 'AbortError' ? 'Timeout' : error.message) 
+        : 'Network error',
+    }
   }
 }
 
@@ -133,13 +159,19 @@ export async function GET() {
 
       const imageChecks = await Promise.all(
         imageUrls.map(async ({ name, url }) => {
-          const exists = await checkUrlExists(url)
+          const checkResult = await checkUrlExists(url)
           return {
             name,
             url,
-            exists,
-            passed: exists,
-            message: exists ? 'Image accessible' : 'Image not found (404 or error)',
+            exists: checkResult.exists,
+            passed: checkResult.exists,
+            message: checkResult.exists 
+              ? 'Image accessible' 
+              : `Image not found (${checkResult.status || 'error'}: ${checkResult.statusText || 'unknown error'})`,
+            details: checkResult.status ? {
+              status: checkResult.status,
+              statusText: checkResult.statusText,
+            } : undefined,
           }
         })
       )
@@ -169,10 +201,11 @@ export async function GET() {
         !results.manifest.passed && 'Ensure your app is deployed and accessible via HTTPS',
         !results.json.passed && 'Fix JSON syntax errors in your manifest route',
         !results.requiredFields.passed && 'Add missing required fields to your manifest',
-        results.images.some(img => !img.passed) && 'Upload missing images or fix image URLs',
+        results.images.some(img => !img.passed) && '⚠️ Note: Server-side image checks may give false negatives on Vercel. Please verify images manually by opening the URLs in a browser.',
         !results.signature.passed && 'Verify signature is correctly generated using Base Build Preview Tool',
         'Test your manifest at: https://base.dev/preview',
         'Manifest URL: ' + manifestUrl,
+        '💡 Tip: If images exist when you open them in browser, they are likely fine. The debug endpoint may have issues with server-side self-fetching.',
       ].filter(Boolean),
     })
 

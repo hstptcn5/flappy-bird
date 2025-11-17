@@ -3,7 +3,7 @@ import './globals.css'
 import { Providers } from './providers'
 
 // Update these URLs with your actual domain after deployment
-const ROOT_URL = process.env.NEXT_PUBLIC_URL || 'https://your-app.vercel.app'
+const ROOT_URL = process.env.NEXT_PUBLIC_URL || 'https://flappy-b.vercel.app'
 
 export const metadata: Metadata = {
   title: 'Flappy Mini - Flappy Bird Mini App',
