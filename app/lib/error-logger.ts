@@ -49,8 +49,23 @@ export function setupErrorHandlers() {
 
   // Catch unhandled errors
   window.addEventListener('error', (event) => {
+    // Ignore wallet provider errors - these are expected in Farcaster when no wallet is connected
+    const errorMessage = event.message || ''
+    if (
+      errorMessage.includes('sender_getProviderState') ||
+      errorMessage.includes('No account exist') ||
+      errorMessage.includes('Failed to get initial state')
+    ) {
+      // These are expected errors from wallet providers when no account exists
+      // Don't log them as they're not actual bugs
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Wallet provider error (expected when no wallet connected):', errorMessage)
+      }
+      return
+    }
+
     logError({
-      error: event.message || 'Unknown error',
+      error: errorMessage,
       stack: event.error?.stack,
       url: event.filename,
       context: {
@@ -64,8 +79,25 @@ export function setupErrorHandlers() {
   // Catch unhandled promise rejections
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason
+    const errorMessage = reason?.message || String(reason) || 'Unhandled promise rejection'
+    
+    // Ignore wallet provider errors
+    if (
+      errorMessage.includes('sender_getProviderState') ||
+      errorMessage.includes('No account exist') ||
+      errorMessage.includes('Failed to get initial state') ||
+      (typeof reason === 'object' && reason !== null && 'error' in reason && 
+       String(reason.error).includes('No account exist'))
+    ) {
+      // Expected wallet provider errors - don't log
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Wallet provider rejection (expected):', errorMessage)
+      }
+      return
+    }
+
     logError({
-      error: reason?.message || String(reason) || 'Unhandled promise rejection',
+      error: errorMessage,
       stack: reason?.stack,
       context: {
         type: 'unhandled_rejection',
@@ -78,6 +110,17 @@ export function setupErrorHandlers() {
   const originalConsoleError = console.error
   console.error = (...args: any[]) => {
     originalConsoleError.apply(console, args)
+    
+    // Check if this is a wallet provider error (expected, don't log)
+    const errorString = args.map(a => String(a)).join(' ')
+    if (
+      errorString.includes('sender_getProviderState') ||
+      errorString.includes('No account exist') ||
+      errorString.includes('Failed to get initial state')
+    ) {
+      // Expected wallet provider error - don't log
+      return
+    }
     
     // Try to extract error info
     const errorArg = args.find((arg) => arg instanceof Error)
@@ -97,6 +140,27 @@ export function setupErrorHandlers() {
         },
       })
     }
+  }
+
+  // Suppress wallet provider errors globally to prevent crashes
+  // These errors are expected when no wallet is connected
+  const originalWindowError = window.onerror
+  window.onerror = (message, source, lineno, colno, error) => {
+    const errorMessage = String(message || '')
+    if (
+      errorMessage.includes('sender_getProviderState') ||
+      errorMessage.includes('No account exist') ||
+      errorMessage.includes('Failed to get initial state')
+    ) {
+      // Suppress wallet provider errors - return true to prevent default error handling
+      return true
+    }
+    
+    // Call original handler for other errors
+    if (originalWindowError) {
+      return originalWindowError(message, source, lineno, colno, error)
+    }
+    return false
   }
 }
 
