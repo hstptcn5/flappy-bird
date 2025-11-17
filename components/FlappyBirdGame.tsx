@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Script from 'next/script'
 import styles from './FlappyBirdGame.module.css'
+import { sdk } from '@farcaster/miniapp-sdk'
 
 // Types
 interface Theme {
@@ -276,10 +277,10 @@ export default function FlappyBirdGame() {
       if (!Object.prototype.hasOwnProperty.call(THEMES, savedTheme)) {
         savedTheme = 'classic'
         try {
-          localStorage.setItem('flappyTheme', 'classic')
+        localStorage.setItem('flappyTheme', 'classic')
         } catch {
           // Ignore storage errors
-        }
+      }
       }
       
       setCurrentTheme(savedTheme)
@@ -310,10 +311,10 @@ export default function FlappyBirdGame() {
       // Preload environment assets
       const load = (src: string, onOk: (img: HTMLImageElement) => void, onFail?: () => void) => {
         try {
-          const i = new Image()
-          i.onload = () => onOk(i)
-          i.onerror = () => onFail && onFail()
-          i.src = src
+        const i = new Image()
+        i.onload = () => onOk(i)
+        i.onerror = () => onFail && onFail()
+        i.src = src
         } catch (error) {
           console.warn('Failed to load image:', src, error)
           onFail && onFail()
@@ -349,7 +350,7 @@ export default function FlappyBirdGame() {
     setCurrentTheme(themeKey)
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem('flappyTheme', themeKey)
+      localStorage.setItem('flappyTheme', themeKey)
       } catch (error) {
         console.warn('Failed to save theme to localStorage:', error)
       }
@@ -364,7 +365,7 @@ export default function FlappyBirdGame() {
     setCurrentSkin(skinKey)
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem('flappySkin', skinKey)
+      localStorage.setItem('flappySkin', skinKey)
       } catch (error) {
         console.warn('Failed to save skin to localStorage:', error)
       }
@@ -510,7 +511,7 @@ export default function FlappyBirdGame() {
       setBestScore(newBest)
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem('flappyBestScore', newBest.toString())
+        localStorage.setItem('flappyBestScore', newBest.toString())
         } catch (error) {
           console.warn('Failed to save best score to localStorage:', error)
         }
