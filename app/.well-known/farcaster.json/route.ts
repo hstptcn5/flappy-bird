@@ -13,38 +13,57 @@ const accountAssociation = {
 }
 
 export async function GET() {
-  const manifest = {
-    accountAssociation,
-    baseBuilder: {
-      ownerAddress: OWNER_ADDRESS,
-    },
-    miniapp: {
-      version: '1',
-      name: 'Flappy Mini',
-      homeUrl: ROOT_URL,
-      iconUrl: `${ROOT_URL}/1.png`,
-      splashImageUrl: `${ROOT_URL}/splash-image.png`,
-      splashBackgroundColor: '#222222',
-      webhookUrl: `${ROOT_URL}/api/webhook`,
-      subtitle: 'Play Flappy Bird instantly',
-      description: 'Challenge friends and beat high scores in this classic Flappy Bird game. Customize your bird and themes!',
-      screenshotUrls: [
-        `${ROOT_URL}/screenshot-1.png`,
-        `${ROOT_URL}/screenshot-2.png`,
-        `${ROOT_URL}/screenshot-3.png`,
-      ],
-      primaryCategory: 'games',
-      tags: ['game', 'flappy-bird', 'arcade', 'miniapp', 'baseapp'],
-      heroImageUrl: `${ROOT_URL}/og-image.png`,
-      tagline: 'Play fast. Beat friends.',
-      ogTitle: 'Flappy Mini',
-      ogDescription: 'Play Flappy Bird instantly in Base App. Challenge friends and beat high scores!',
-      ogImageUrl: `${ROOT_URL}/og-image.png`,
-      noindex: false,
-    },
-  }
+  try {
+    const manifest = {
+      accountAssociation,
+      baseBuilder: {
+        ownerAddress: OWNER_ADDRESS,
+      },
+      miniapp: {
+        version: '1',
+        name: 'Flappy Mini',
+        homeUrl: ROOT_URL,
+        iconUrl: `${ROOT_URL}/1.png`,
+        splashImageUrl: `${ROOT_URL}/splash-image.png`,
+        splashBackgroundColor: '#222222',
+        webhookUrl: `${ROOT_URL}/api/webhook`,
+        subtitle: 'Play Flappy Bird instantly',
+        description: 'Challenge friends and beat high scores in this classic Flappy Bird game. Customize your bird and themes!',
+        screenshotUrls: [
+          `${ROOT_URL}/screenshot-1.png`,
+          `${ROOT_URL}/screenshot-2.png`,
+          `${ROOT_URL}/screenshot-3.png`,
+        ],
+        primaryCategory: 'games',
+        tags: ['game', 'flappy-bird', 'arcade', 'miniapp', 'baseapp'],
+        heroImageUrl: `${ROOT_URL}/og-image.png`,
+        tagline: 'Play fast. Beat friends.',
+        ogTitle: 'Flappy Mini',
+        ogDescription: 'Play Flappy Bird instantly in Base App. Challenge friends and beat high scores!',
+        ogImageUrl: `${ROOT_URL}/og-image.png`,
+        noindex: false,
+      },
+    }
 
-  return NextResponse.json(manifest)
+    return NextResponse.json(manifest, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+      },
+    })
+  } catch (error) {
+    console.error('Error generating Farcaster manifest:', error)
+    return NextResponse.json(
+      { error: 'Failed to generate manifest' },
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+  }
 }
 
 
