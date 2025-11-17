@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Script from 'next/script'
 import styles from './FlappyBirdGame.module.css'
-import { sdk } from '@farcaster/miniapp-sdk'
 
 // Types
 interface Theme {
