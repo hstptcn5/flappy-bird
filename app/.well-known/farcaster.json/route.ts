@@ -24,23 +24,23 @@ export async function GET() {
         name: 'Flappy Mini',
         homeUrl: ROOT_URL,
         iconUrl: `${ROOT_URL}/1.png`,
-        splashImageUrl: `${ROOT_URL}/splash-image.png`,
+        splashImageUrl: `${ROOT_URL}/1.png`, // Using 1.png temporarily - replace with splash-image.png later
         splashBackgroundColor: '#222222',
         webhookUrl: `${ROOT_URL}/api/webhook`,
         subtitle: 'Play Flappy Bird instantly',
         description: 'Challenge friends and beat high scores in this classic Flappy Bird game. Customize your bird and themes!',
         screenshotUrls: [
-          `${ROOT_URL}/screenshot-1.png`,
-          `${ROOT_URL}/screenshot-2.png`,
-          `${ROOT_URL}/screenshot-3.png`,
+          `${ROOT_URL}/2.png`, // Using existing images
+          `${ROOT_URL}/3.png`,
+          `${ROOT_URL}/4.png`,
         ],
         primaryCategory: 'games',
         tags: ['game', 'flappy-bird', 'arcade', 'miniapp', 'baseapp'],
-        heroImageUrl: `${ROOT_URL}/og-image.png`,
+        heroImageUrl: `${ROOT_URL}/1.png`, // Using 1.png temporarily - replace with og-image.png later
         tagline: 'Play fast. Beat friends.',
         ogTitle: 'Flappy Mini',
         ogDescription: 'Play Flappy Bird instantly in Base App. Challenge friends and beat high scores!',
-        ogImageUrl: `${ROOT_URL}/og-image.png`,
+        ogImageUrl: `${ROOT_URL}/1.png`, // Using 1.png temporarily - replace with og-image.png later
         noindex: false,
       },
     }
